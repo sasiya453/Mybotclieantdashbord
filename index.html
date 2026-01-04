@@ -3,116 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnimeLust | User Management</title>
+    <title>AnimeLust | User Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
-        body { background: #0f172a; color: white; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); }
+        body { background: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        .status-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen p-4 md:p-8">
 
-    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
-        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700">
-            <h2 class="text-2xl font-bold mb-6 text-center text-blue-400">Restricted Access</h2>
-            <input type="password" id="pass-input" placeholder="Enter Password" 
-                   class="w-full p-3 rounded bg-slate-700 border border-slate-600 mb-4 focus:outline-none focus:border-blue-500 transition-all">
-            <button onclick="checkPassword()" 
-                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded transition-all">
-                Unlock Dashboard
-            </button>
-            <p id="error-msg" class="text-red-400 text-sm mt-4 hidden text-center">Incorrect password. Access denied.</p>
+    <header class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+        <div>
+            <h1 class="text-4xl font-extrabold tracking-tight text-white mb-2">
+                <i class="fa-solid fa-users-gear text-blue-500 mr-2"></i>User Directory
+            </h1>
+            <p class="text-slate-400 flex items-center gap-2">
+                <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                Connected to <span class="text-blue-400 font-mono">animelust</span> database
+            </p>
         </div>
-    </div>
+        
+        <div class="flex gap-4">
+            <div class="glass p-4 rounded-2xl border border-white/10 min-w-[120px]">
+                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Total Users</p>
+                <p id="user-count" class="text-3xl font-black text-white">--</p>
+            </div>
+            <button onclick="fetchUsers()" class="glass p-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-all active:scale-95">
+                <i class="fa-solid fa-rotate-right text-xl"></i>
+            </button>
+        </div>
+    </header>
 
-    <div id="main-content" class="hidden flex-1 p-4 md:p-8">
-        <header class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                    Telegram User Database
-                </h1>
-                <p class="text-slate-400">Managing users for <b>animelust</b></p>
+    <main class="max-w-6xl mx-auto">
+        <div class="glass rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-white/5 text-slate-400 text-xs uppercase tracking-widest">
+                            <th class="p-5 font-semibold">User ID</th>
+                            <th class="p-5 font-semibold">Full Name</th>
+                            <th class="p-5 font-semibold">Username</th>
+                            <th class="p-5 font-semibold">Joined Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body" class="divide-y divide-white/5">
+                        <tr>
+                            <td colspan="4" class="p-20 text-center">
+                                <div class="flex flex-col items-center gap-4">
+                                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500"></i>
+                                    <p class="text-slate-400 animate-pulse">Establishing secure connection...</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="glass p-4 rounded-xl border border-white/10 flex gap-6">
-                <div class="text-center"><p class="text-xs text-slate-400 uppercase">Total Users</p><p id="user-count" class="text-xl font-bold text-blue-400">0</p></div>
-                <div class="text-center"><p class="text-xs text-slate-400 uppercase">Status</p><p class="text-xl font-bold text-green-400">Live</p></div>
-            </div>
-        </header>
-
-        <main class="max-w-6xl mx-auto">
-            <div class="glass rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="bg-white/5 border-b border-white/10 text-slate-300 text-sm uppercase">
-                            <tr>
-                                <th class="p-4">User ID</th>
-                                <th class="p-4">First Name</th>
-                                <th class="p-4">Username</th>
-                                <th class="p-4">Created At</th>
-                            </tr>
-                        </thead>
-                        <tbody id="user-table-body" class="divide-y divide-white/5">
-                            </tbody>
-                    </table>
-                </div>
-            </div>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <script>
-        // CONFIGURATION
-        const SUPABASE_URL = 'https://zzhiuyhedcbnuxlwbsiv.supabase.co';
+        // PROJECT SETTINGS (Based on your image)
+        const SUPABASE_URL = 'https://ayzlyisipndoxlyrchuo.supabase.co';
+        // You MUST replace the placeholder below with your actual "anon public" key 
+        // found in Project Settings > API
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6aGl1eWhlZGNibnV4bHdic2l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwOTkyODMsImV4cCI6MjA4MjY3NTI4M30.F3-UYozv-eN0FFnHoK0xbh93SKmbq4ZMUSSsmXJcmTM';
-        const ACCESS_PASS = 'mgslsampath00';
 
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        function checkPassword() {
-            const input = document.getElementById('pass-input').value;
-            if(input === ACCESS_PASS) {
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('main-content').classList.remove('hidden');
-                fetchUsers();
-            } else {
-                document.getElementById('error-msg').classList.remove('hidden');
-            }
-        }
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function fetchUsers() {
             const tbody = document.getElementById('user-table-body');
-            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center animate-pulse">Loading users...</td></tr>';
+            
+            try {
+                const { data, error } = await _supabase
+                    .from('telegram_users')
+                    .select('*')
+                    .order('created_at', { ascending: false });
 
-            const { data, error } = await supabase
-                .from('telegram_users')
-                .select('*')
-                .order('created_at', { ascending: false });
+                if (error) throw error;
 
-            if (error) {
-                console.error(error);
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-400">Error: ${error.message}</td></tr>`;
-                return;
-            }
+                document.getElementById('user-count').innerText = data.length;
+                tbody.innerHTML = '';
 
-            document.getElementById('user-count').innerText = data.length;
-            tbody.innerHTML = '';
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-10 text-center text-slate-500">No users found in database.</td></tr>';
+                    return;
+                }
 
-            data.forEach(user => {
-                const date = new Date(user.created_at).toLocaleDateString('en-US', {
-                    month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                data.forEach(user => {
+                    const date = new Date(user.created_at).toLocaleDateString('en-GB', {
+                        day: '2-digit', month: 'short', year: 'numeric'
+                    });
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-white/[0.02] transition-colors group">
+                            <td class="p-5 font-mono text-sm text-blue-400/80">${user.id}</td>
+                            <td class="p-5">
+                                <span class="text-white font-medium">${user.first_name || '—'}</span>
+                            </td>
+                            <td class="p-5">
+                                ${user.username && user.username !== 'EMPTY' 
+                                    ? `<span class="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-semibold border border-blue-500/20">@${user.username}</span>`
+                                    : `<span class="text-slate-600 text-xs italic">No Username</span>`}
+                            </td>
+                            <td class="p-5 text-slate-400 text-sm italic">${date}</td>
+                        </tr>
+                    `;
                 });
 
-                tbody.innerHTML += `
-                    <tr class="hover:bg-white/5 transition-colors">
-                        <td class="p-4 font-mono text-blue-300 text-sm">${user.id}</td>
-                        <td class="p-4 font-semibold">${user.first_name || 'N/A'}</td>
-                        <td class="p-4"><span class="bg-blue-900/40 text-blue-300 px-2 py-1 rounded text-xs">@${user.username || 'EMPTY'}</span></td>
-                        <td class="p-4 text-slate-400 text-sm">${date}</td>
+            } catch (err) {
+                console.error('Fetch error:', err);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="p-20 text-center">
+                            <i class="fa-solid fa-triangle-exclamation text-red-500 text-3xl mb-4"></i>
+                            <p class="text-red-400 font-bold">Failed to load data</p>
+                            <p class="text-slate-500 text-sm mt-1">${err.message}</p>
+                            <p class="text-xs text-slate-600 mt-4 italic underline cursor-pointer" onclick="location.reload()">Try refreshing the page</p>
+                        </td>
                     </tr>
                 `;
-            });
+            }
         }
+
+        // Auto-load on page start
+        window.onload = fetchUsers;
     </script>
 </body>
 </html>
+
