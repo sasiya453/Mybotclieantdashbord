@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnimeLust | User Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
+        body { background: #0f172a; color: white; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700">
+            <h2 class="text-2xl font-bold mb-6 text-center text-blue-400">Restricted Access</h2>
+            <input type="password" id="pass-input" placeholder="Enter Password" 
+                   class="w-full p-3 rounded bg-slate-700 border border-slate-600 mb-4 focus:outline-none focus:border-blue-500 transition-all">
+            <button onclick="checkPassword()" 
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded transition-all">
+                Unlock Dashboard
+            </button>
+            <p id="error-msg" class="text-red-400 text-sm mt-4 hidden text-center">Incorrect password. Access denied.</p>
+        </div>
+    </div>
+
+    <div id="main-content" class="hidden flex-1 p-4 md:p-8">
+        <header class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                    Telegram User Database
+                </h1>
+                <p class="text-slate-400">Managing users for <b>animelust</b></p>
+            </div>
+            <div class="glass p-4 rounded-xl border border-white/10 flex gap-6">
+                <div class="text-center"><p class="text-xs text-slate-400 uppercase">Total Users</p><p id="user-count" class="text-xl font-bold text-blue-400">0</p></div>
+                <div class="text-center"><p class="text-xs text-slate-400 uppercase">Status</p><p class="text-xl font-bold text-green-400">Live</p></div>
+            </div>
+        </header>
+
+        <main class="max-w-6xl mx-auto">
+            <div class="glass rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-white/5 border-b border-white/10 text-slate-300 text-sm uppercase">
+                            <tr>
+                                <th class="p-4">User ID</th>
+                                <th class="p-4">First Name</th>
+                                <th class="p-4">Username</th>
+                                <th class="p-4">Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-table-body" class="divide-y divide-white/5">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // CONFIGURATION
+        const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';
+        const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const ACCESS_PASS = 'mgslsampath00';
+
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function checkPassword() {
+            const input = document.getElementById('pass-input').value;
+            if(input === ACCESS_PASS) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+                fetchUsers();
+            } else {
+                document.getElementById('error-msg').classList.remove('hidden');
+            }
+        }
+
+        async function fetchUsers() {
+            const tbody = document.getElementById('user-table-body');
+            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center animate-pulse">Loading users...</td></tr>';
+
+            const { data, error } = await supabase
+                .from('telegram_users')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error(error);
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-400">Error: ${error.message}</td></tr>`;
+                return;
+            }
+
+            document.getElementById('user-count').innerText = data.length;
+            tbody.innerHTML = '';
+
+            data.forEach(user => {
+                const date = new Date(user.created_at).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-white/5 transition-colors">
+                        <td class="p-4 font-mono text-blue-300 text-sm">${user.id}</td>
+                        <td class="p-4 font-semibold">${user.first_name || 'N/A'}</td>
+                        <td class="p-4"><span class="bg-blue-900/40 text-blue-300 px-2 py-1 rounded text-xs">@${user.username || 'EMPTY'}</span></td>
+                        <td class="p-4 text-slate-400 text-sm">${date}</td>
+                    </tr>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
